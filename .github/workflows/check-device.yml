@@ -1,0 +1,69 @@
+
+name: Validate Boston ROM manifest
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - lineage-23.2
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout local manifests
+        uses: actions/checkout@v4
+
+      - name: Validate XML and project branches
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import pathlib
+          import xml.etree.ElementTree as ET
+
+          files = list(pathlib.Path(".").rglob("*.xml"))
+          if not files:
+              raise SystemExit("ERROR: No XML manifest files found.")
+
+          for file in files:
+              root = ET.parse(file).getroot()
+              if root.tag != "manifest":
+                  raise SystemExit(f"ERROR: {file} has no manifest root.")
+              print(f"Valid XML: {file}")
+
+          print(f"Validated {len(files)} XML file(s).")
+          PY
+
+          while IFS= read -r -d '' file; do
+            while IFS=$'\t' read -r name revision; do
+              [[ -n "$name" && -n "$revision" ]] || continue
+
+              url="https://github.com/${name}.git"
+              ref="refs/heads/${revision}"
+
+              echo "Checking ${name} — ${revision}"
+
+              if ! git ls-remote --exit-code \
+                  --heads "$url" "$ref" >/dev/null; then
+                echo "::error::Missing branch or inaccessible repo: $name ($revision)"
+                exit 1
+              fi
+            done < <(python3 - "$file" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse(sys.argv[1]).getroot()
+          for project in root.findall("project"):
+              name = project.get("name", "")
+              revision = project.get("revision", "")
+              print(f"{name}\t{revision}")
+          PY
+          )
+          done < <(find . -name '*.xml' -print0)
+
+          echo "All manifest XML files and project branches passed."
