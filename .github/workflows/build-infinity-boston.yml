@@ -1,0 +1,72 @@
+
+name: Build Infinity X 16 for Boston
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout device manifests
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git git-lfs curl python3 bc bison \
+            build-essential ccache flex g++-multilib gcc-multilib \
+            gnupg gperf libelf-dev liblz4-tool libncurses-dev \
+            libssl-dev libxml2-utils lzop rsync squashfs-tools \
+            xsltproc zip zlib1g-dev
+          git lfs install
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo \
+            -o "$HOME/bin/repo"
+          chmod +x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Check runner storage
+        run: df -h /
+
+      - name: Initialize Infinity X 16
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/infinity"
+          cd "$GITHUB_WORKSPACE/infinity"
+          repo init --depth=1 --no-repo-verify --git-lfs \
+            -u https://github.com/ProjectInfinity-X/manifest \
+            -b 16 -g default,-mips,-darwin,-notdefault
+
+      - name: Add Boston local manifest
+        run: |
+          cd "$GITHUB_WORKSPACE/infinity"
+          mkdir -p .repo/local_manifests
+          cp "$GITHUB_WORKSPACE/roomservice.xml" \
+            .repo/local_manifests/roomservice.xml
+
+      - name: Sync Android source
+        run: |
+          cd "$GITHUB_WORKSPACE/infinity"
+          repo sync -c --no-clone-bundle --no-tags \
+            --optimized-fetch --prune --force-sync -j2
+
+      - name: Build Boston userdebug ROM
+        run: |
+          cd "$GITHUB_WORKSPACE/infinity"
+          source build/envsetup.sh
+          lunch infinity_boston-userdebug
+          m bacon -j2
+
+      - name: Upload ROM ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infinity-x-boston-build
+          path: infinity/out/target/product/boston/*.zip
+          if-no-files-found: warn
+          retention-days: 7
