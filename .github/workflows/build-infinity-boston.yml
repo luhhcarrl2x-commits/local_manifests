@@ -52,6 +52,11 @@ jobs:
       - name: Sync Android source
         run: |
           cd "$GITHUB_WORKSPACE/infinity"
+          df -h /
+          df -i /
+          repo sync -c --no-clone-bundle --no-tags \
+            --optimized-fetch --prune --force-sync -j2     run: |
+          cd "$GITHUB_WORKSPACE/infinity"
           repo sync -c --no-clone-bundle --no-tags \
             --optimized-fetch --prune --force-sync -j2
 
