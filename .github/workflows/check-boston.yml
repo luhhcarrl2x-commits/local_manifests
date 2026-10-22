@@ -1,0 +1,36 @@
+
+name: Check Boston Device Configuration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-device:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check Boston device repository
+        run: |
+          set -euo pipefail
+          git clone --depth=1 \
+            --branch infinity-16-bringup \
+            https://github.com/luhhcarrl2x-commits/android_device_motorola_boston_g.git \
+            boston
+
+          echo "=== Product files ==="
+          test -f boston/AndroidProducts.mk
+          test -f boston/infinity_boston.mk
+          test -f boston/device.mk
+
+          echo "=== Product configuration ==="
+          grep -nE \
+            'infinity_boston|PRODUCT_DEVICE|PRODUCT_NAME|inherit-product' \
+            boston/AndroidProducts.mk \
+            boston/infinity_boston.mk \
+            boston/device.mk
+
+          echo "Boston device repository checks passed."
