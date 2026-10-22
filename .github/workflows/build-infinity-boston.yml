@@ -31,7 +31,7 @@ jobs:
           chmod +x "$HOME/bin/repo"
           echo "$HOME/bin" >> "$GITHUB_PATH"
 
-       - name: Free disk space
+      - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
@@ -63,10 +63,8 @@ jobs:
           df -h /
           df -i /
           repo sync -c --no-clone-bundle --no-tags \
-            --optimized-fetch --prune --force-sync -j2     run: |
-          cd "$GITHUB_WORKSPACE/infinity"
-          repo sync -c --no-clone-bundle --no-tags \
             --optimized-fetch --prune --force-sync -j2
+
 
       - name: Build Boston userdebug ROM
         run: |
