@@ -50,12 +50,26 @@ jobs:
             -u https://github.com/ProjectInfinity-X/manifest \
             -b 16 -g default,-mips,-darwin,-notdefault
 
+
       - name: Add Boston local manifest
         run: |
-          cd "$GITHUB_WORKSPACE/infinity"
-          mkdir -p .repo/local_manifests
-          cp "$GITHUB_WORKSPACE/roomservice.xml" \
-            .repo/local_manifests/roomservice.xml
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import xml.etree.ElementTree as ET
+
+          source = Path(os.environ["GITHUB_WORKSPACE"]) / "roomservice.xml"
+          target = Path(os.environ["GITHUB_WORKSPACE"]) / "infinity/.repo/local_manifests/roomservice.xml"
+
+          if not source.is_file():
+              raise SystemExit(f"Missing manifest: {source}")
+
+          content = source.read_text(encoding="utf-8-sig").lstrip()
+          ET.fromstring(content)
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(content, encoding="utf-8")
+          print("Boston local manifest validated and installed.")
+          PY
 
       - name: Sync Android source
         run: |
