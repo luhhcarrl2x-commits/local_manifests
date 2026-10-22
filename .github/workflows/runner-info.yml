@@ -1,0 +1,41 @@
+
+name: Check Android Build Runner
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Show CPU and memory
+        run: |
+          echo "=== CPU ==="
+          nproc
+          lscpu | grep -E '^CPU\(s\):|Model name'
+
+          echo "=== MEMORY ==="
+          free -h
+
+      - name: Show disk space
+        run: |
+          echo "=== DISK SPACE ==="
+          df -h /
+
+          echo "=== Available inode count ==="
+          df -i /
+
+      - name: Check Git and Python
+        run: |
+          git --version
+          python3 --version
+
+      - name: Report
+        run: |
+          echo "Runner diagnostic completed."
+          echo "This workflow does not download or compile Android."
